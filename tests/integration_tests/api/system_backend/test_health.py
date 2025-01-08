@@ -9,7 +9,12 @@ from tests.utils.hvac_integration_test_case import HvacIntegrationTestCase
 class TestHealth(HvacIntegrationTestCase, TestCase):
     enable_vault_ha = True
 
+    def setUp(self):
+        super().setUp()
+        self.client.sys.enable_secrets_engine(backend_type="kv", path="test")
+
     def tearDown(self):
+        self.client.sys.disable_secrets_engine(path="test")
         # If one of our test cases left the Vault cluster sealed, unseal it here.
         self.manager.unseal()
         super().tearDown()
@@ -89,7 +94,7 @@ class TestHealth(HvacIntegrationTestCase, TestCase):
             standby_status=use_standby_node
         )
         logging.debug("vault_addr being used: %s" % vault_addr)
-        client = create_client(url=vault_addr)
+        client = create_client(url=vault_addr, timeout=90)  # tests prone to timeing out
 
         read_status_response = client.sys.read_health_status(
             method=method,
